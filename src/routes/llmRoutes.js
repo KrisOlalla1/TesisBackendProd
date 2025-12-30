@@ -499,9 +499,28 @@ No agregues ninguna otra clave ni texto fuera del JSON.`;
         ].join('\n').trim();
       } catch (parseError) {
         // Error parseando respuesta del LLM
-        // Si forceOllama=1, usar la respuesta raw del LLM
+        // Si forceOllama=1, intentar extraer algo útil de la respuesta raw
         if (forceOllama && raw) {
-          contenido = `🩺 Recomendación médica\nPrioridad: 🟠 MEDIA\n\n${String(raw).slice(0, 500)}`;
+          // Intentar parsear diferentes formatos de respuesta de Ollama
+          let textoRecomendacion = '';
+          try {
+            const rawParsed = JSON.parse(raw);
+            // Buscar campos comunes que Ollama puede devolver
+            textoRecomendacion = rawParsed.recomendacion || rawParsed.resumen || rawParsed.respuesta ||
+              rawParsed.mensaje || rawParsed.texto || rawParsed.content ||
+              rawParsed.response || JSON.stringify(rawParsed, null, 2);
+
+            // Si tiene prioridad, usarla
+            const prio = rawParsed.prioridad || rawParsed.priority || 'media';
+            const prioLabel = prio.toLowerCase().includes('alta') ? '🔴 ALTA' :
+              prio.toLowerCase().includes('baja') ? '🟢 BAJA' : '🟠 MEDIA';
+
+            contenido = `🩺 Recomendación médica\\nPrioridad: ${prioLabel}\\n\\n${textoRecomendacion}`;
+          } catch {
+            // Si no es JSON válido, usar el texto raw pero limpiarlo
+            textoRecomendacion = String(raw).replace(/[{}"\[\]]/g, '').slice(0, 600).trim();
+            contenido = `🩺 Recomendación médica\\nPrioridad: 🟠 MEDIA\\n\\n${textoRecomendacion}`;
+          }
         } else if (Array.isArray(abns) && abns.length > 0) {
           contenido = buildAbnormalContent(modo, abns, rangeLabel);
         } else {
