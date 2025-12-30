@@ -321,6 +321,7 @@ router.post('/recomendacion', authMiddleware, async (req, res) => {
   const isFast = String(req.query.fast || '').toLowerCase() === '1';
   const tipo = String(req.query.tipo || 'general').toLowerCase();
   const wantDebug = String(req.query.debug || '') === '1';
+  const forceOllama = String(req.query.forceOllama || '') === '1'; // Móvil puede forzar llamada a Ollama
   const TIPOS = new Set(['general', 'preocupante', 'vigilar', 'habitos']);
   const modo = TIPOS.has(tipo) ? tipo : 'general';
 
@@ -340,7 +341,8 @@ router.post('/recomendacion', authMiddleware, async (req, res) => {
     statsLocal = extractStatsFromPrompt(prompt);
     abnsLocal = computeAbnormalities(statsLocal);
     const todoNormal = Array.isArray(abnsLocal) && abnsLocal.length === 0 && Object.keys(statsLocal).length > 0;
-    if (todoNormal || Object.keys(statsLocal).length === 0) {
+    // Si forceOllama=1, saltar la respuesta predeterminada y llamar a Ollama directamente
+    if (!forceOllama && (todoNormal || Object.keys(statsLocal).length === 0)) {
       const contenido = buildQuickStableContent(modo, rangeLabel);
       const payload = { recomendacion: contenido, modelo_usado: 'reglas-locales', lm_studio_disponible: true, cached: false, ...(wantDebug ? { _debug: { stats: statsLocal, abns: abnsLocal } } : {}) };
       cacheSet(cacheKey, payload);
