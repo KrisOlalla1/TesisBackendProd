@@ -351,8 +351,11 @@ router.post('/recomendacion', authMiddleware, async (req, res) => {
   } catch { }
 
   // Solo si hay anormalidades: revisar cache de la respuesta del LLM
-  const cached = cacheGet(cacheKey);
-  if (cached) return res.json(cached);
+  // Si forceOllama=1, saltar también el cache para obtener respuesta fresca
+  if (!forceOllama) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return res.json(cached);
+  }
 
   const estadoLM = await verificarOllama();
   if (!estadoLM.disponible) {
