@@ -451,6 +451,20 @@ No agregues ninguna otra clave ni texto fuera del JSON.`;
         let alerta = !!parsed.alerta;
 
         if (!alterados || alterados.length === 0) {
+          // Si forceOllama=1, usar la recomendación del LLM directamente (sin fallback a reglas locales)
+          if (forceOllama && parsed.recomendacion) {
+            const contenidoLLM = String(parsed.recomendacion);
+            const prioridadLabel = prioridad === 'alta' ? '🔴 ALTA' : prioridad === 'media' ? '🟠 MEDIA' : '🟢 BAJA';
+            const resultBody = {
+              recomendacion: `🩺 Recomendación médica\nPrioridad: ${prioridadLabel}${alerta ? '  ⚠️ ALERTA' : ''}\n\n${contenidoLLM}`,
+              modelo_usado: estadoLM.modeloActivo,
+              lm_studio_disponible: true,
+              source: 'ollama-direct',
+              ...(wantDebug ? { _debug: { stats: stats, abns, llm_raw: parsed } } : {})
+            };
+            cacheSet(cacheKey, resultBody);
+            return resultBody;
+          }
           // Si el LLM no reporta alteraciones pero nuestras reglas sí, usamos las reglas como fallback seguro
           if (Array.isArray(abns) && abns.length > 0) {
             const contenidoReglas = buildAbnormalContent(modo, abns, rangeLabel);
