@@ -497,9 +497,12 @@ No agregues ninguna otra clave ni texto fuera del JSON.`;
           'Siguientes pasos: Revalorar en 24–48 h o antes si hay empeoramiento.',
           'Seguridad del paciente: Si presenta dificultad para respirar, dolor torácico, confusión o fiebre alta persistente, acuda a urgencias.'
         ].join('\n').trim();
-      } catch {
-        // Error parseando respuesta del LLM, usar fallback coherente según detección local
-        if (Array.isArray(abns) && abns.length > 0) {
+      } catch (parseError) {
+        // Error parseando respuesta del LLM
+        // Si forceOllama=1, usar la respuesta raw del LLM
+        if (forceOllama && raw) {
+          contenido = `🩺 Recomendación médica\nPrioridad: 🟠 MEDIA\n\n${String(raw).slice(0, 500)}`;
+        } else if (Array.isArray(abns) && abns.length > 0) {
           contenido = buildAbnormalContent(modo, abns, rangeLabel);
         } else {
           contenido = buildQuickStableContent(modo, rangeLabel);
