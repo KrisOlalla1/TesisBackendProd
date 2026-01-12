@@ -9,9 +9,9 @@ export const createPatient = async (req, res, next) => {
     // Validar si paciente existe
     const pacienteExists = await Paciente.findOne({ $or: [{ cedula }, { correo }] });
     if (pacienteExists) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'El paciente ya está registrado' 
+        error: 'El paciente ya está registrado'
       });
     }
 
@@ -53,9 +53,11 @@ export const createPatient = async (req, res, next) => {
 
 export const getDoctorPatients = async (req, res, next) => {
   try {
-    const pacientes = await Paciente.find({ doctor_asignado: req.user.id })
-      .select('-contrasena_hash');
-    
+    // Retornar TODOS los pacientes del sistema (búsqueda global)
+    const pacientes = await Paciente.find()
+      .select('-contrasena_hash')
+      .populate('doctor_asignado', 'nombre_completo cedula correo'); // Incluir info del doctor asignado
+
     res.json({
       success: true,
       count: pacientes.length,
@@ -152,7 +154,7 @@ export const updatePatient = async (req, res, next) => {
         paciente.estado = estadoNormalizado;
       }
     }
-    
+
     // Si hay nueva contraseña, hashearla
     if (contrasena) {
       paciente.contrasena_hash = await bcrypt.hash(contrasena, 10);
