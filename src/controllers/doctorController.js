@@ -53,15 +53,25 @@ export const createPatient = async (req, res, next) => {
 
 export const getDoctorPatients = async (req, res, next) => {
   try {
-    // Retornar TODOS los pacientes del sistema (búsqueda global)
-    const pacientes = await Paciente.find()
+    // Si viene el parámetro ?global=true, buscar en TODOS los pacientes
+    // Si no, solo los del doctor autenticado
+    const searchGlobal = req.query.global === 'true';
+
+    let query = {};
+    if (!searchGlobal) {
+      // Por defecto: solo pacientes del doctor autenticado
+      query = { doctor_asignado: req.user.id };
+    }
+
+    const pacientes = await Paciente.find(query)
       .select('-contrasena_hash')
-      .populate('doctor_asignado', 'nombre_completo cedula correo'); // Incluir info del doctor asignado
+      .populate('doctor_asignado', 'nombre_completo cedula correo');
 
     res.json({
       success: true,
       count: pacientes.length,
-      data: pacientes
+      data: pacientes,
+      searchMode: searchGlobal ? 'global' : 'local'
     });
   } catch (error) {
     next(error);
